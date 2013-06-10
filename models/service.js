@@ -1,3 +1,5 @@
+var Logger = require('../lib/logger');
+
 var Service = exports = module.exports = function Service(name, data) {
   this.name = name;
   this.data = data;
@@ -13,5 +15,6 @@ Service.prototype.getIntSync = function(name){
 Service.prototype.setIntSync = function(name, value){
   re = new RegExp(name + '=(\\d+);', 'g');
   var newValue = name + '=' + value + ';';
+	Logger.debug('setIntSync: updating meeting counts: ' + newValue);
   this.data = this.data.replace(re, newValue);
 }

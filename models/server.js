@@ -1,5 +1,7 @@
 var Logger = require('../lib/logger')
   , Service = require('./service')
+  , Meeting = require('../models/meeting')
+  , sys = require('sys')
   , config = require('../config');
 
 var db = {};
@@ -41,8 +43,8 @@ Server.prototype.getMeetingCountSync = function() {
       Logger.error('server ' + this.name + ', getting the number of meetings from: "' + service.data + '"')
     }
   }
-
   return count;
+	
 }
 
 // Inc the number of meetings described in the BBB service
@@ -78,7 +80,10 @@ Server.firstSync = function(){
 };
 
 Server.allSync = function(){
+	Logger.info('in server allSync' + sys.inspect(db));
+
   var arr = Object.keys(db).reduce(function(arr, id){
+		Logger.info('in server allSync. pushing ' + id);
     arr.push(db[id]);
     return arr;
   }, []);

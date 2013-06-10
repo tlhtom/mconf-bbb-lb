@@ -1,4 +1,5 @@
 var fs = require('fs')
+  , Logger = require('../lib/logger')
   , Server = require('./server');
 
 var db = {};
@@ -37,6 +38,7 @@ Meeting.allSync = function(){
   return arr;
 };
 
+
 Meeting.destroySync = function(id){
   if (db[id]) {
     delete db[id];
@@ -57,16 +59,19 @@ Meeting.clearSync = function(){
 // Loads a json into the local database
 // For DEVELOPMENT only
 Meeting.fromJsonSync = function(path){
+	Logger.debug('trying to load data from ' + path);
   try {
     var fileContents = fs.readFileSync(path, 'utf8');
     var json = JSON.parse(fileContents);
     for(var idx in json){
-      var s = new Server(json[idx].server.url, json[idx].server.salt);
+			Logger.debug('	got var idx ==  ' + idx);
+      var s = new Server(json[idx].id, json[idx].server.url, json[idx].server.salt);
       var m = new Meeting(json[idx].id, s);
+      s.saveSync();
       m.saveSync();
     }
 
-    Logger.log('loaded data from ' + path);
-    Logger.log('meetings loaded: ' + JSON.stringify(db));
+    Logger.debug('loaded data from ' + path);
+    Logger.debug('meetings loaded: ' + JSON.stringify(db));
   } catch (e) { }
 }

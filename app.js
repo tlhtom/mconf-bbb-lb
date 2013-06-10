@@ -22,6 +22,7 @@ app.configure(function(){
   app.use(express.static(__dirname + '/public'));
 });
 
+app.set('env', 'development')
 app.configure('development', function(){
   app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
 
@@ -34,7 +35,7 @@ app.configure('production', function(){
 });
 
 // Start the integration with nagios
-Nagios.startup(BigBlueButton.nagiosCallback);
+//Nagios.startup(BigBlueButton.nagiosCallback);
 
 // simple request logger
 app.get('*', function(req, res, next){

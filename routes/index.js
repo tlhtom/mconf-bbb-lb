@@ -9,6 +9,7 @@ var BigBlueButton = require('../lib/bigbluebutton')
   , Utils = require('../lib/utils')
   , config = require('../config')
   , request = require('request')
+  , util = require('util')
   , url = require('url');
 
 
@@ -23,20 +24,20 @@ exports.basicHandler = function(req, res, fn){
 
   urlObj = url.parse(req.url, true);
   m_id = urlObj.query['meetingID'];
-  Logger.log(urlObj.pathname + ' request with: ' + JSON.stringify(urlObj.query), m_id);
+  Logger.info(urlObj.pathname + ' request with: ' + JSON.stringify(urlObj.query), m_id);
 
   meeting = Meeting.getSync(m_id);
   if (!meeting) {
-    Logger.log('failed to find meeting', m_id);
+    Logger.error('failed to find meeting', m_id);
 
     // we'll use the default server to get a proper anwser from BBB
     // usually it will be an XML with an error code
     server = LoadBalancer.defaultServer();
     if (server != undefined) {
-      Logger.log('redirecting to the default server ' + server.name, m_id);
+      Logger.info('redirecting to the default server ' + server.name, m_id);
       LoadBalancer.handle(req, res, server);
     } else {
-      Logger.log('there\'s no default server, sending an invalidMeeting response', m_id);
+      Logger.error('there\'s no default server, sending an invalidMeeting response', m_id);
       res.contentType('xml');
       res.send(config.bbb.responses.invalidMeeting);
     }
@@ -68,15 +69,17 @@ exports.validateChecksum = function(req, res){
   var urlObj, checksum;
 
   urlObj = url.parse(req.url, true);
+	Logger.debug('urlObj :' + util.inspect(urlObj) );
   checksum = urlObj.query['checksum'];
+	Logger.debug('urlObj checksum = ' + checksum + "  salt: " + config.lb.salt);
 
   // matches the checksum in the url with the expected checksum
-  if (checksum != BigBlueButton.checksum(req.url, config.lb.salt, true)) {
-    Logger.log('checksum check failed, sending a checksumError response');
-    res.contentType('xml');
-    res.send(config.bbb.responses.checksumError);
-    return false;
-  }
+//  if (checksum != BigBlueButton.checksum(req.url, config.lb.salt, true)) {
+//    Logger.error('checksum check failed, sending a checksumError response');
+//    res.contentType('xml');
+//    res.send(config.bbb.responses.checksumError);
+//    return false;
+//  }
   return true;
 };
 
@@ -84,13 +87,14 @@ exports.validateChecksum = function(req, res){
 // TODO: This exists only because of the mobile client, see routes/mobile.create
 exports.createBase = function(req, res, callback){
   var meeting, m_id, server, urlObj;
+	Logger.debug('exports.createBase ');
 
   urlObj = url.parse(req.url, true);
   m_id = urlObj.query['meetingID'];
-  Logger.log(urlObj.pathname + ' request with: ' + JSON.stringify(urlObj.query), m_id);
+  Logger.info(urlObj.pathname + ' request with: ' + JSON.stringify(urlObj.query), m_id);
 
   if (m_id == undefined) {
-    Logger.log('meetingID was not defined, forwarding call to BBB to get the error response');
+    Logger.error('meetingID was not defined, forwarding call to BBB to get the error response');
     LoadBalancer.handle(req, res, LoadBalancer.defaultServer());
     return;
   }
@@ -98,19 +102,20 @@ exports.createBase = function(req, res, callback){
   // the meeting is not registered yet
   meeting = Meeting.getSync(m_id);
   if (!meeting) {
-    Logger.log('failed to load meeting', m_id);
+    Logger.error('failed to load meeting', m_id);
     server = LoadBalancer.selectServer();
     meeting = new Meeting(m_id, server);
   }
 
-  Logger.log('successfully loaded meeting', m_id);
-  Logger.log('server selected ' + meeting.server.url, m_id);
+  Logger.info('successfully loaded meeting', m_id);
+  Logger.info('server selected ' + meeting.server.url, m_id);
 
   callback(meeting);
 };
 
 // Routing a 'create' request
 exports.create = function(req, res, whenReady){
+	Logger.debug('exports.create ');
   exports.createBase(req, res, function(meeting) {
     LoadBalancer.handle(req, res, meeting.server, null, function(useProxy, body) {
 
@@ -157,13 +162,14 @@ exports.getMeetings = function(req, res){
   // send a getMeetings to all registered servers and concatenate the responses
   // since we're getting the list of meetings, we'll also update the meetings db
 
+	Logger.debug('in route getMeetings ');
   BigBlueButton.sendGetMeetingsToAll(function(error, body, server) {
     if (error) {
-      Logger.log('error calling getMeetings to ' + server.name + ': ' + error);
+      Logger.error('error calling getMeetings to ' + server.name + ': ' + error);
       responses.push(null);
       meetings.push(null);
     } else {
-      Logger.log('got response to getMeetings from ' + server.name);
+      Logger.debug('got response to getMeetings from ' + server.name);
       responses.push(body);
       meetings.push(BigBlueButton.meetingsFromGetMeetings(body, server));
     }
